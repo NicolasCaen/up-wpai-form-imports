@@ -74,11 +74,6 @@ class UP_WPAI_Admin {
             'query_var'          => true,
             'rewrite'            => array('slug' => 'up-wpai-form'),
             'capability_type'    => 'post',
-            'capabilities'       => array(
-                'create_posts' => 'manage_options',
-                'edit_posts'   => 'manage_options',
-                'delete_posts' => 'manage_options',
-            ),
             'has_archive'        => false,
             'hierarchical'       => false,
             'menu_position'      => null,
