@@ -1,0 +1,150 @@
+# French (France) language file for UP WP All Import Form Imports
+# Copyright (C) 2025
+msgid ""
+msgstr ""
+"Project-Id-Version: UP WP All Import Form Imports 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-13 11:42:21+0000\n"
+"PO-Revision-Date: 2025-08-13 11:42:21+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "UP WP All Import Form Imports"
+msgstr "UP WP All Import Form Imports"
+
+msgid "nécessite que le plugin WP All Import soit installé et activé."
+msgstr "nécessite que le plugin WP All Import soit installé et activé."
+
+msgid "Formulaires d'import"
+msgstr "Formulaires d'import"
+
+msgid "Formulaire d'import"
+msgstr "Formulaire d'import"
+
+msgid "Ajouter nouveau"
+msgstr "Ajouter nouveau"
+
+msgid "Ajouter un nouveau formulaire"
+msgstr "Ajouter un nouveau formulaire"
+
+msgid "Nouveau formulaire"
+msgstr "Nouveau formulaire"
+
+msgid "Modifier le formulaire"
+msgstr "Modifier le formulaire"
+
+msgid "Voir le formulaire"
+msgstr "Voir le formulaire"
+
+msgid "Tous les formulaires"
+msgstr "Tous les formulaires"
+
+msgid "Rechercher des formulaires"
+msgstr "Rechercher des formulaires"
+
+msgid "Formulaires parents:"
+msgstr "Formulaires parents:"
+
+msgid "Aucun formulaire trouvé."
+msgstr "Aucun formulaire trouvé."
+
+msgid "Aucun formulaire trouvé dans la corbeille."
+msgstr "Aucun formulaire trouvé dans la corbeille."
+
+msgid "Import lancé avec succès !"
+msgstr "Import lancé avec succès !"
+
+msgid "Voir dans WP All Import"
+msgstr "Voir dans WP All Import"
+
+msgid "Aucun formulaire d'import créé."
+msgstr "Aucun formulaire d'import créé."
+
+msgid "Créer votre premier formulaire"
+msgstr "Créer votre premier formulaire"
+
+msgid "Modifier"
+msgstr "Modifier"
+
+msgid "Modèle lié:"
+msgstr "Modèle lié:"
+
+msgid "Aucun modèle sélectionné"
+msgstr "Aucun modèle sélectionné"
+
+msgid "Choisir un fichier"
+msgstr "Choisir un fichier"
+
+msgid "Uploader et lancer"
+msgstr "Uploader et lancer"
+
+msgid "Veuillez d'abord associer un modèle d'import à ce formulaire."
+msgstr "Veuillez d'abord associer un modèle d'import à ce formulaire."
+
+msgid "Veuillez sélectionner un fichier à uploader."
+msgstr "Veuillez sélectionner un fichier à uploader."
+
+msgid "Êtes-vous sûr de vouloir lancer cet import ?"
+msgstr "Êtes-vous sûr de vouloir lancer cet import ?"
+
+msgid "Traitement en cours..."
+msgstr "Traitement en cours..."
+
+msgid "Paramètres du formulaire"
+msgstr "Paramètres du formulaire"
+
+msgid "Modèle d'import WP All Import"
+msgstr "Modèle d'import WP All Import"
+
+msgid "Sélectionner un modèle d'import..."
+msgstr "Sélectionner un modèle d'import..."
+
+msgid "Sélectionnez le modèle d'import WP All Import qui sera cloné lors de l'upload de fichiers."
+msgstr "Sélectionnez le modèle d'import WP All Import qui sera cloné lors de l'upload de fichiers."
+
+msgid "Aucun import WP All Import trouvé. Veuillez d'abord créer un import dans WP All Import."
+msgstr "Aucun import WP All Import trouvé. Veuillez d'abord créer un import dans WP All Import."
+
+msgid "Description du formulaire"
+msgstr "Description du formulaire"
+
+msgid "Description optionnelle pour ce formulaire d'import..."
+msgstr "Description optionnelle pour ce formulaire d'import..."
+
+msgid "Description optionnelle qui sera affichée sur la page de liste des formulaires."
+msgstr "Description optionnelle qui sera affichée sur la page de liste des formulaires."
+
+msgid "Erreur de sécurité. Veuillez réessayer."
+msgstr "Erreur de sécurité. Veuillez réessayer."
+
+msgid "Permissions insuffisantes."
+msgstr "Permissions insuffisantes."
+
+msgid "Formulaire invalide."
+msgstr "Formulaire invalide."
+
+msgid "Erreur lors de l'upload du fichier."
+msgstr "Erreur lors de l'upload du fichier."
+
+msgid "Type de fichier non autorisé. Seuls les fichiers CSV, XML et Excel sont acceptés."
+msgstr "Type de fichier non autorisé. Seuls les fichiers CSV, XML et Excel sont acceptés."
+
+msgid "Impossible de déplacer le fichier uploadé."
+msgstr "Impossible de déplacer le fichier uploadé."
+
+msgid "Aucun modèle d'import associé à ce formulaire."
+msgstr "Aucun modèle d'import associé à ce formulaire."
+
+msgid "Modèle d'import invalide."
+msgstr "Modèle d'import invalide."
+
+msgid "Import modèle invalide."
+msgstr "Import modèle invalide."
+
+msgid "Impossible de créer le nouvel import."
+msgstr "Impossible de créer le nouvel import."
