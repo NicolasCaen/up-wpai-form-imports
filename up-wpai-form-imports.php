@@ -3,7 +3,7 @@
  * Plugin Name: UP WP All Import Form Imports
  * Plugin URI: https://yourwebsite.com
  * Description: Module permettant de créer des formulaires d'import liés à WP All Import pour automatiser les imports de fichiers.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Votre Nom
  * Author URI: https://yourwebsite.com
  * Text Domain: up-wpai-form-imports
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Définir les constantes du plugin
-define('UPWAI_PLUGIN_VERSION', '1.0.0');
+define('UPWAI_PLUGIN_VERSION', '1.1.0');
 define('UPWAI_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('UPWAI_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('UPWAI_PLUGIN_BASENAME', plugin_basename(__FILE__));
