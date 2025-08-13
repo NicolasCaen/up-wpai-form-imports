@@ -40,6 +40,43 @@ if (!defined('ABSPATH')) {
                     <br><strong style="color: #d63638;">
                         <?php _e('Aucun import WP All Import trouvé. Veuillez d\'abord créer un import dans WP All Import.', 'up-wpai-form-imports'); ?>
                     </strong>
+                    
+                    <?php 
+                    // Afficher le diagnostic pour aider au débogage
+                    $admin = UP_WPAI_Admin::get_instance();
+                    $diagnostic = $admin->get_wp_all_import_diagnostic();
+                    ?>
+                    <div style="margin-top: 10px; padding: 10px; background: #f1f1f1; border-left: 4px solid #0073aa;">
+                        <h4><?php _e('Diagnostic WP All Import:', 'up-wpai-form-imports'); ?></h4>
+                        <ul style="margin: 5px 0;">
+                            <li><strong><?php _e('WP All Import actif:', 'up-wpai-form-imports'); ?></strong> 
+                                <?php echo $diagnostic['wp_all_import_active'] ? '✅ Oui' : '❌ Non'; ?>
+                            </li>
+                            <?php if (isset($diagnostic['database_tables'])): ?>
+                                <li><strong><?php _e('Tables de base de données:', 'up-wpai-form-imports'); ?></strong>
+                                    <ul style="margin-left: 20px;">
+                                        <?php foreach ($diagnostic['database_tables'] as $table => $exists): ?>
+                                            <li><?php echo esc_html($table); ?>: <?php echo $exists ? '✅' : '❌'; ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </li>
+                            <?php endif; ?>
+                            <?php if (isset($diagnostic['post_types_count'])): ?>
+                                <li><strong><?php _e('Imports par post type:', 'up-wpai-form-imports'); ?></strong>
+                                    <ul style="margin-left: 20px;">
+                                        <?php foreach ($diagnostic['post_types_count'] as $post_type => $count): ?>
+                                            <li><?php echo esc_html($post_type); ?>: <?php echo intval($count); ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </li>
+                            <?php endif; ?>
+                            <?php if (isset($diagnostic['pmxi_imports_count'])): ?>
+                                <li><strong><?php _e('Imports dans pmxi_imports:', 'up-wpai-form-imports'); ?></strong> 
+                                    <?php echo intval($diagnostic['pmxi_imports_count']); ?>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </div>
                 <?php endif; ?>
             </p>
             

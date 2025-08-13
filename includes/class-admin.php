@@ -226,19 +226,88 @@ class UP_WPAI_Admin {
      * Récupérer les modèles d'import WP All Import
      */
     private function get_wp_all_import_models() {
-        $imports = get_posts(array(
-            'post_type'      => 'import',
-            'post_status'    => 'any',
-            'posts_per_page' => -1,
-            'orderby'        => 'title',
-            'order'          => 'ASC',
-        ));
+        // Essayer différents post types utilisés par WP All Import
+        $post_types = array('import', 'pmxi_import', 'wp_all_import');
+        $imports = array();
+        
+        foreach ($post_types as $post_type) {
+            $found_imports = get_posts(array(
+                'post_type'      => $post_type,
+                'post_status'    => 'any',
+                'posts_per_page' => -1,
+                'orderby'        => 'title',
+                'order'          => 'ASC',
+            ));
+            
+            if (!empty($found_imports)) {
+                $imports = array_merge($imports, $found_imports);
+                break; // Utiliser le premier post type qui fonctionne
+            }
+        }
+        
+        // Si aucun post type ne fonctionne, essayer la base de données directement
+        if (empty($imports)) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'pmxi_imports';
+            
+            // Vérifier si la table existe
+            if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+                $results = $wpdb->get_results("SELECT id, name, friendly_name FROM $table_name ORDER BY name ASC");
+                
+                // Convertir en format compatible avec get_posts
+                foreach ($results as $result) {
+                    $import = new stdClass();
+                    $import->ID = $result->id;
+                    $import->post_title = !empty($result->friendly_name) ? $result->friendly_name : $result->name;
+                    $import->post_type = 'pmxi_import';
+                    $imports[] = $import;
+                }
+            }
+        }
         
         return $imports;
     }
     
     /**
-     * Gérer la requête AJAX pour l'aperçu d'import
+     * Diagnostic WP All Import pour le débogage
+     */
+    public function get_wp_all_import_diagnostic() {
+        global $wpdb;
+        
+        $diagnostic = array();
+        
+        // Vérifier si WP All Import est actif
+        $diagnostic['wp_all_import_active'] = class_exists('PMXI_Plugin');
+        
+        // Vérifier les tables de base de données
+        $tables = array('pmxi_imports', 'pmxi_posts', 'pmxi_files');
+        $diagnostic['database_tables'] = array();
+        
+        foreach ($tables as $table) {
+            $table_name = $wpdb->prefix . $table;
+            $diagnostic['database_tables'][$table] = ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name);
+        }
+        
+        // Compter les imports par post type
+        $post_types = array('import', 'pmxi_import', 'wp_all_import');
+        $diagnostic['post_types_count'] = array();
+        
+        foreach ($post_types as $post_type) {
+            $count = wp_count_posts($post_type);
+            $diagnostic['post_types_count'][$post_type] = isset($count->publish) ? $count->publish : 0;
+        }
+        
+        // Vérifier la table pmxi_imports directement
+        if ($diagnostic['database_tables']['pmxi_imports']) {
+            $table_name = $wpdb->prefix . 'pmxi_imports';
+            $diagnostic['pmxi_imports_count'] = $wpdb->get_var("SELECT COUNT(*) FROM $table_name");
+        }
+        
+        return $diagnostic;
+    }
+    
+    /**
+     * Gérer l'AJAX pour l'aperçu des imports
      */
     public function ajax_get_import_preview() {
         // Vérifier le nonce
