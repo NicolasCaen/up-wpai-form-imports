@@ -36,183 +36,128 @@ class UP_WPAI_Import_Cloner {
      * Cloner un import WP All Import
      */
     public function clone_import($model_import_id, $new_file_path) {
-        // Récupérer l'import modèle
-        $model_import = get_post($model_import_id);
+        // Vérifier que le modèle d'import existe dans la table WP All Import
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
         
-        if (!$model_import || $model_import->post_type !== 'import') {
-            return new WP_Error('invalid_import', __('Import modèle invalide.', 'up-wpai-form-imports'));
+        // Vérifier si la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            return new WP_Error('table_missing', __('Table WP All Import introuvable. Assurez-vous que le plugin WP All Import est installé et activé.', 'up-wpai-form-imports'));
         }
         
-        // Créer un nouveau post d'import
+        // Vérifier que le modèle existe dans la table pmxi_imports et récupérer ses données
+        $model_import_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $model_import_id
+        ));
+        
+        if (!$model_import_data) {
+            return new WP_Error('invalid_model', __('Modèle d\'import invalide. L\'ID ' . $model_import_id . ' n\'existe pas dans la table WP All Import.', 'up-wpai-form-imports'));
+        }
+        
+        // Cloner le modèle d'import dans la table pmxi_imports
         $new_import_data = array(
-            'post_title'    => $model_import->post_title . ' - ' . date('Y-m-d H:i:s'),
-            'post_content'  => $model_import->post_content,
-            'post_status'   => 'draft', // Commencer en brouillon
-            'post_type'     => 'import',
-            'post_author'   => get_current_user_id(),
-            'menu_order'    => $model_import->menu_order,
+            'name'              => $model_import_data->name . ' - ' . date('Y-m-d H:i:s'),
+            'friendly_name'     => $model_import_data->friendly_name . ' - ' . date('Y-m-d H:i:s'),
+            'type'              => $model_import_data->type,
+            'path'              => $new_file_path,
+            'options'           => $model_import_data->options,
+            'root_element'      => $model_import_data->root_element,
+            'processing'        => 0, // Pas en cours de traitement
+            'executing'         => 0, // Pas en cours d'exécution
+            'triggered'         => 0, // Pas déclenché
+            'queue_chunk_number' => 0,
+            'registered_on'     => current_time('mysql'),
+            'iteration'         => 0
         );
         
-        $new_import_id = wp_insert_post($new_import_data);
+        // Insérer le nouvel import dans la table pmxi_imports
+        $result = $wpdb->insert($table_name, $new_import_data);
         
-        if (is_wp_error($new_import_id)) {
-            return new WP_Error('clone_failed', __('Impossible de créer le nouvel import.', 'up-wpai-form-imports'));
+        if ($result === false) {
+            return new WP_Error('clone_failed', __('Impossible de créer le nouvel import dans la table WP All Import.', 'up-wpai-form-imports'));
         }
         
-        // Cloner toutes les meta données
-        $this->clone_import_meta($model_import_id, $new_import_id, $new_file_path);
+        $new_import_id = $wpdb->insert_id;
         
-        // Marquer l'import comme cloné depuis notre plugin
-        update_post_meta($new_import_id, '_upwai_cloned_from', $model_import_id);
-        update_post_meta($new_import_id, '_upwai_cloned_at', current_time('mysql'));
-        update_post_meta($new_import_id, '_upwai_original_file', $new_file_path);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - New import created with ID: ' . $new_import_id);
+        }
         
         return $new_import_id;
     }
     
     /**
-     * Cloner les meta données d'un import
+     * Obtenir les informations d'un import depuis la table pmxi_imports
      */
-    private function clone_import_meta($source_id, $target_id, $new_file_path) {
-        // Récupérer toutes les meta données de l'import source
-        $meta_data = get_post_meta($source_id);
+    public function get_import_info($import_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
         
-        foreach ($meta_data as $meta_key => $meta_values) {
-            // Ignorer certaines meta données spécifiques
-            if (in_array($meta_key, array('_edit_last', '_edit_lock'))) {
-                continue;
-            }
-            
-            foreach ($meta_values as $meta_value) {
-                $meta_value = maybe_unserialize($meta_value);
-                
-                // Remplacer le chemin du fichier d'import
-                if ($meta_key === '_import_file' || $meta_key === 'path') {
-                    $meta_value = $new_file_path;
-                }
-                
-                // Réinitialiser certaines valeurs pour le nouvel import
-                if ($meta_key === '_import_processing') {
-                    $meta_value = 0;
-                }
-                
-                if ($meta_key === '_import_processed') {
-                    $meta_value = 0;
-                }
-                
-                if ($meta_key === '_import_created') {
-                    $meta_value = 0;
-                }
-                
-                if ($meta_key === '_import_updated') {
-                    $meta_value = 0;
-                }
-                
-                if ($meta_key === '_import_skipped') {
-                    $meta_value = 0;
-                }
-                
-                if ($meta_key === '_import_deleted') {
-                    $meta_value = 0;
-                }
-                
-                // Réinitialiser les logs et historiques
-                if (strpos($meta_key, '_log') !== false || strpos($meta_key, '_history') !== false) {
-                    continue; // Ne pas copier les logs
-                }
-                
-                // Ajouter la meta donnée au nouvel import
-                add_post_meta($target_id, $meta_key, $meta_value);
-            }
-        }
-        
-        // Ajouter des meta données spécifiques au nouvel import
-        update_post_meta($target_id, '_import_file', $new_file_path);
-        update_post_meta($target_id, '_file_path', $new_file_path);
-        update_post_meta($target_id, '_import_created_at', current_time('mysql'));
-        
-        // Marquer comme prêt pour l'import
-        update_post_meta($target_id, '_import_ready', 1);
-    }
-    
-    /**
-     * Vérifier si un import peut être cloné
-     */
-    public function can_clone_import($import_id) {
-        $import = get_post($import_id);
-        
-        if (!$import || $import->post_type !== 'import') {
+        // Vérifier si la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
             return false;
         }
         
-        // Vérifier que l'import a les meta données nécessaires
-        $required_meta = array('_import_file', '_import_template');
+        // Récupérer les données de l'import
+        $import_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $import_id
+        ));
         
-        foreach ($required_meta as $meta_key) {
-            if (!get_post_meta($import_id, $meta_key, true)) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Obtenir les informations d'un import
-     */
-    public function get_import_info($import_id) {
-        $import = get_post($import_id);
-        
-        if (!$import) {
+        if (!$import_data) {
             return false;
         }
         
         return array(
-            'id'          => $import->ID,
-            'title'       => $import->post_title,
-            'status'      => $import->post_status,
-            'created'     => $import->post_date,
-            'file_path'   => get_post_meta($import_id, '_import_file', true),
-            'template'    => get_post_meta($import_id, '_import_template', true),
-            'post_type'   => get_post_meta($import_id, '_import_post_type', true),
-            'processed'   => get_post_meta($import_id, '_import_processed', true),
-            'created_posts' => get_post_meta($import_id, '_import_created', true),
-            'updated_posts' => get_post_meta($import_id, '_import_updated', true),
-            'skipped_posts' => get_post_meta($import_id, '_import_skipped', true),
+            'id'            => $import_data->id,
+            'name'          => $import_data->name,
+            'friendly_name' => $import_data->friendly_name,
+            'type'          => $import_data->type,
+            'path'          => $import_data->path,
+            'registered_on' => $import_data->registered_on,
+            'processing'    => $import_data->processing,
+            'executing'     => $import_data->executing,
+            'triggered'     => $import_data->triggered,
+            'iteration'     => $import_data->iteration
         );
     }
     
     /**
-     * Nettoyer les anciens imports clonés
+     * Nettoyer les anciens imports clonés depuis la table pmxi_imports
      */
     public function cleanup_old_cloned_imports($days_old = 30) {
-        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days_old} days"));
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
         
-        $old_imports = get_posts(array(
-            'post_type'      => 'import',
-            'post_status'    => 'any',
-            'posts_per_page' => -1,
-            'meta_query'     => array(
-                array(
-                    'key'     => '_upwai_cloned_at',
-                    'value'   => $cutoff_date,
-                    'compare' => '<',
-                    'type'    => 'DATETIME',
-                ),
-            ),
-        ));
-        
-        foreach ($old_imports as $import) {
-            // Supprimer le fichier associé
-            $file_path = get_post_meta($import->ID, '_upwai_original_file', true);
-            if ($file_path && file_exists($file_path)) {
-                unlink($file_path);
-            }
-            
-            // Supprimer l'import
-            wp_delete_post($import->ID, true);
+        // Vérifier si la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            return 0;
         }
         
-        return count($old_imports);
+        $cutoff_date = date('Y-m-d H:i:s', strtotime("-{$days_old} days"));
+        
+        // Récupérer les anciens imports clonés
+        $old_imports = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE name LIKE %s AND registered_on < %s",
+            '% - %', // Pattern pour identifier les imports clonés (contiennent ' - ' avec timestamp)
+            $cutoff_date
+        ));
+        
+        $deleted_count = 0;
+        foreach ($old_imports as $import) {
+            // Supprimer le fichier associé si il existe
+            if (!empty($import->path) && file_exists($import->path)) {
+                unlink($import->path);
+            }
+            
+            // Supprimer l'import de la table
+            $result = $wpdb->delete($table_name, array('id' => $import->id), array('%d'));
+            if ($result !== false) {
+                $deleted_count++;
+            }
+        }
+        
+        return $deleted_count;
     }
 }

@@ -67,7 +67,24 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
             <?php foreach ($forms as $form): 
                 $model_import_id = get_post_meta($form->ID, '_model_import_id', true);
                 $form_description = get_post_meta($form->ID, '_form_description', true);
-                $model_import = $model_import_id ? get_post($model_import_id) : null;
+                
+                // Récupérer le vrai nom du modèle depuis la table WP All Import
+                $model_import_name = null;
+                if ($model_import_id) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'pmxi_imports';
+                    
+                    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+                        $model_data = $wpdb->get_row($wpdb->prepare(
+                            "SELECT name, friendly_name FROM $table_name WHERE id = %d",
+                            $model_import_id
+                        ));
+                        
+                        if ($model_data) {
+                            $model_import_name = !empty($model_data->friendly_name) ? $model_data->friendly_name : $model_data->name;
+                        }
+                    }
+                }
             ?>
                 <div class="upwai-form-card">
                     <div class="upwai-form-header">
@@ -86,8 +103,10 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                         
                         <div class="upwai-form-meta">
                             <strong><?php _e('Modèle lié:', 'up-wpai-form-imports'); ?></strong>
-                            <?php if ($model_import): ?>
-                                <span class="upwai-model-name"><?php echo esc_html($model_import->post_title); ?></span>
+                            <?php if ($model_import_name): ?>
+                                <span class="upwai-model-name"><?php echo esc_html($model_import_name); ?></span>
+                            <?php elseif ($model_import_id): ?>
+                                <span class="upwai-model-error"><?php echo sprintf(__('Modèle #%d (non trouvé dans WP All Import)', 'up-wpai-form-imports'), $model_import_id); ?></span>
                             <?php else: ?>
                                 <span class="upwai-no-model"><?php _e('Aucun modèle sélectionné', 'up-wpai-form-imports'); ?></span>
                             <?php endif; ?>
@@ -95,7 +114,7 @@ $error = isset($_GET['error']) ? $_GET['error'] : '';
                     </div>
                     
                     <div class="upwai-form-footer">
-                        <?php if ($model_import): ?>
+                        <?php if ($model_import_name): ?>
                             <form method="post" enctype="multipart/form-data" class="upwai-upload-form">
                                 <?php wp_nonce_field('upwai_form_action', 'upwai_nonce'); ?>
                                 <input type="hidden" name="upwai_action" value="upload_and_launch">

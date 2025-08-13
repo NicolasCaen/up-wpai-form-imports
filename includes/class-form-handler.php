@@ -146,11 +146,40 @@ class UP_WPAI_Form_Handler {
             return new WP_Error('no_model', __('Aucun modèle d\'import associé à ce formulaire.', 'up-wpai-form-imports'));
         }
         
-        // Récupérer le modèle d'import
-        $model_import = get_post($model_import_id);
-        if (!$model_import || $model_import->post_type !== 'import') {
-            return new WP_Error('invalid_model', __('Modèle d\'import invalide.', 'up-wpai-form-imports'));
+        // Vérifier que le modèle d'import existe dans la table WP All Import
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
+        
+        // Debug : log des informations du modèle
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Validating Model Import ID: ' . $model_import_id);
+            error_log('UP WPAI Debug - Checking table: ' . $table_name);
         }
+        
+        // Vérifier si la table existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") != $table_name) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('UP WPAI Debug - WP All Import table does not exist');
+            }
+            return new WP_Error('table_missing', __('Table WP All Import introuvable. Assurez-vous que le plugin WP All Import est installé et activé.', 'up-wpai-form-imports'));
+        }
+        
+        // Vérifier que le modèle existe dans la table pmxi_imports
+        $model_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_name WHERE id = %d",
+            $model_import_id
+        ));
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Model exists in pmxi_imports: ' . ($model_exists ? 'Yes' : 'No'));
+        }
+        
+        if (!$model_exists) {
+            return new WP_Error('invalid_model', __('Modèle d\'import invalide. L\'ID ' . $model_import_id . ' n\'existe pas dans la table WP All Import.', 'up-wpai-form-imports'));
+        }
+        
+        // Le modèle a été validé via la table pmxi_imports
+        // Plus besoin de logique basée sur les Custom Post Types
         
         // Cloner l'import
         $cloner = UP_WPAI_Import_Cloner::get_instance();
@@ -160,28 +189,52 @@ class UP_WPAI_Form_Handler {
             return $new_import_id;
         }
         
-        // Lancer l'import si la fonction existe
-        if (function_exists('wp_all_import_run')) {
-            wp_all_import_run($new_import_id);
-        } else {
-            // Méthode alternative pour lancer l'import
-            $this->trigger_import_execution($new_import_id);
-        }
+        // Déclencher l'import via les actions WordPress et WP All Import
+        $this->trigger_import_execution($new_import_id);
         
         return $new_import_id;
     }
     
     /**
-     * Déclencher l'exécution de l'import (méthode alternative)
+     * Déclencher l'exécution de l'import via la table pmxi_imports
      */
     private function trigger_import_execution($import_id) {
-        // Cette méthode peut être utilisée si wp_all_import_run n'est pas disponible
-        // On peut utiliser les actions WordPress ou les méthodes de WP All Import
-        do_action('wp_all_import_before_import', $import_id);
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
         
-        // Marquer l'import comme prêt à être exécuté
-        update_post_meta($import_id, '_import_triggered', true);
-        update_post_meta($import_id, '_import_triggered_time', current_time('mysql'));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Triggering import execution for ID: ' . $import_id);
+        }
+        
+        // Marquer l'import comme déclenché dans la table pmxi_imports
+        $result = $wpdb->update(
+            $table_name,
+            array(
+                'triggered' => 1,
+                'processing' => 0, // Pas encore en cours de traitement
+                'executing' => 0   // Pas encore en cours d'exécution
+            ),
+            array('id' => $import_id),
+            array('%d', '%d', '%d'),
+            array('%d')
+        );
+        
+        if ($result === false) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('UP WPAI Debug - Failed to trigger import execution');
+            }
+            return false;
+        }
+        
+        // Déclencher les actions WordPress pour WP All Import
+        do_action('wp_all_import_before_import', $import_id);
+        do_action('pmxi_before_import', $import_id);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Import execution triggered successfully');
+        }
+        
+        return true;
     }
     
     /**

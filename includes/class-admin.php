@@ -219,48 +219,103 @@ class UP_WPAI_Admin {
     
     /**
      * Récupérer les modèles d'import WP All Import
+     * WP All Import utilise uniquement ses propres tables, pas de Custom Post Types
      */
     private function get_wp_all_import_models() {
-        // Essayer différents post types utilisés par WP All Import
-        $post_types = array('import', 'pmxi_import', 'wp_all_import');
+        global $wpdb;
         $imports = array();
+        $table_name = $wpdb->prefix . 'pmxi_imports';
         
-        foreach ($post_types as $post_type) {
-            $found_imports = get_posts(array(
-                'post_type'      => $post_type,
-                'post_status'    => 'any',
-                'posts_per_page' => -1,
-                'orderby'        => 'title',
-                'order'          => 'ASC',
-            ));
+        // Debug : log de la recherche
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Searching for import models in table: ' . $table_name);
+        }
+        
+        // Vérifier si la table WP All Import existe
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+            // Récupérer tous les modèles d'import depuis la table pmxi_imports
+            $results = $wpdb->get_results("SELECT id, name, friendly_name, options FROM $table_name ORDER BY name ASC");
             
-            if (!empty($found_imports)) {
-                $imports = array_merge($imports, $found_imports);
-                break; // Utiliser le premier post type qui fonctionne
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('UP WPAI Debug - Database results: ' . count($results) . ' found');
+            }
+            
+            // Convertir en format compatible
+            foreach ($results as $result) {
+                $import = new stdClass();
+                $import->ID = $result->id;
+                
+                // Utiliser friendly_name en priorité, sinon name
+                $display_name = !empty($result->friendly_name) ? $result->friendly_name : $result->name;
+                $import->post_title = $display_name;
+                $import->display_title = $display_name;
+                $import->post_type = 'pmxi_import'; // Type virtuel pour la validation
+                
+                // Debug : log de chaque modèle trouvé
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('UP WPAI Debug - Found Import: ID=' . $result->id . ', Name="' . $result->name . '", Friendly="' . $result->friendly_name . '"');
+                }
+                
+                $imports[] = $import;
+            }
+        } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('UP WPAI Debug - WP All Import table does not exist: ' . $table_name);
+                error_log('UP WPAI Debug - Make sure WP All Import plugin is installed and activated');
             }
         }
         
-        // Si aucun post type ne fonctionne, essayer la base de données directement
-        if (empty($imports)) {
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'pmxi_imports';
-            
-            // Vérifier si la table existe
-            if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
-                $results = $wpdb->get_results("SELECT id, name, friendly_name FROM $table_name ORDER BY name ASC");
-                
-                // Convertir en format compatible avec get_posts
-                foreach ($results as $result) {
-                    $import = new stdClass();
-                    $import->ID = $result->id;
-                    $import->post_title = !empty($result->friendly_name) ? $result->friendly_name : $result->name;
-                    $import->post_type = 'pmxi_import';
-                    $imports[] = $import;
+        // Debug final
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('UP WPAI Debug - Final result: ' . count($imports) . ' imports returned');
+        }
+        
+        return $imports;
+    }
+
+    /**
+     * Obtenir le nom d'affichage correct pour un modèle d'import
+     */
+    private function get_import_display_name($import) {
+        // Essayer différents meta_keys pour le nom du modèle
+        $possible_name_keys = array(
+            '_import_name',
+            '_pmxi_name', 
+            'name',
+            '_name',
+            '_friendly_name',
+            'friendly_name'
+        );
+        
+        foreach ($possible_name_keys as $key) {
+            $value = get_post_meta($import->ID, $key, true);
+            if (!empty($value) && $value !== $import->post_title) {
+                return $value;
+            }
+        }
+        
+        // Si on ne trouve pas de nom spécifique, essayer la base de données directement
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pmxi_imports';
+        if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+            $result = $wpdb->get_row($wpdb->prepare("SELECT name, friendly_name FROM $table_name WHERE id = %d", $import->ID));
+            if ($result) {
+                $db_name = !empty($result->friendly_name) ? $result->friendly_name : $result->name;
+                if (!empty($db_name) && $db_name !== $import->post_title) {
+                    return $db_name;
                 }
             }
         }
         
-        return $imports;
+        // Fallback : utiliser le titre du post mais le nettoyer
+        $title = $import->post_title;
+        
+        // Si le titre contient des mots génériques, essayer de l'améliorer
+        if (stripos($title, 'Auto Draft') !== false || stripos($title, 'Brouillon automatique') !== false) {
+            return 'Modèle d\'import #' . $import->ID;
+        }
+        
+        return $title;
     }
     
     /**

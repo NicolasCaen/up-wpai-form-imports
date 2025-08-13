@@ -26,8 +26,8 @@ if (!defined('ABSPATH')) {
                     <?php foreach ($imports as $import): ?>
                         <option value="<?php echo esc_attr($import->ID); ?>" 
                                 <?php selected($model_import_id, $import->ID); ?>>
-                            <?php echo esc_html($import->post_title); ?>
-                            <?php if ($import->post_status !== 'publish'): ?>
+                            <?php echo esc_html(isset($import->display_title) ? $import->display_title : $import->post_title); ?>
+                            <?php if (isset($import->post_status) && $import->post_status !== 'publish'): ?>
                                 (<?php echo esc_html($import->post_status); ?>)
                             <?php endif; ?>
                         </option>
@@ -83,19 +83,63 @@ if (!defined('ABSPATH')) {
             <?php if (!empty($imports) && $model_import_id): ?>
                 <div id="import-preview" class="upwai-import-preview">
                     <?php
-                    $selected_import = get_post($model_import_id);
+                    // Récupérer les vraies données du modèle depuis la table WP All Import
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'pmxi_imports';
+                    $selected_import = null;
+                    
+                    if ($wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name) {
+                        $selected_import = $wpdb->get_row($wpdb->prepare(
+                            "SELECT * FROM $table_name WHERE id = %d",
+                            $model_import_id
+                        ));
+                    }
+                    
                     if ($selected_import):
-                        $import_post_type = get_post_meta($model_import_id, '_import_post_type', true);
-                        $import_file = get_post_meta($model_import_id, '_import_file', true);
-                        $import_template = get_post_meta($model_import_id, '_import_template', true);
+                        // Décoder les options du modèle (stockées en JSON ou sérialisées)
+                        $options = array();
+                        if (!empty($selected_import->options)) {
+                            $options = maybe_unserialize($selected_import->options);
+                            if (!is_array($options)) {
+                                $options = json_decode($selected_import->options, true);
+                                if (!is_array($options)) {
+                                    $options = array();
+                                }
+                            }
+                        }
+                        
+                        // Extraire les informations importantes
+                        $import_name = !empty($selected_import->friendly_name) ? $selected_import->friendly_name : $selected_import->name;
+                        $import_post_type = isset($options['custom_type']) ? $options['custom_type'] : 
+                                          (isset($options['post_type']) ? $options['post_type'] : 'Non défini');
+                        $import_file = !empty($selected_import->path) ? basename($selected_import->path) : 'Non défini';
+                        $import_template = isset($options['template']) ? $options['template'] : 'Non défini';
                     ?>
                         <h4><?php _e('Aperçu du modèle sélectionné:', 'up-wpai-form-imports'); ?></h4>
                         <ul>
-                            <li><strong><?php _e('Titre:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($selected_import->post_title); ?></li>
-                            <li><strong><?php _e('Type de contenu:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($import_post_type ?: 'Non défini'); ?></li>
-                            <li><strong><?php _e('Fichier source:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html(basename($import_file ?: 'Non défini')); ?></li>
-                            <li><strong><?php _e('Statut:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($selected_import->post_status); ?></li>
+                            <li><strong><?php _e('Titre:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($import_name); ?></li>
+                            <li><strong><?php _e('Type de contenu:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($import_post_type); ?></li>
+                            <li><strong><?php _e('Fichier source:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html($import_file); ?></li>
+                            <li><strong><?php _e('Statut:', 'up-wpai-form-imports'); ?></strong> <?php echo esc_html(!empty($selected_import->registered) ? 'Actif' : 'Inactif'); ?></li>
                         </ul>
+                        
+                        <?php
+                        // Afficher les options du modèle pour diagnostic (en mode debug)
+                        if (defined('WP_DEBUG') && WP_DEBUG && !empty($options)) {
+                            echo '<details style="margin-top: 10px;"><summary><strong>Debug: Options du modèle WP All Import</strong></summary>';
+                            echo '<pre style="background: #f1f1f1; padding: 10px; font-size: 11px; max-height: 200px; overflow-y: auto;">';
+                            print_r($options);
+                            echo '</pre></details>';
+                        }
+                        
+                        // Afficher toutes les données du modèle pour diagnostic (en mode debug)
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            echo '<details style="margin-top: 10px;"><summary><strong>Debug: Données complètes du modèle</strong></summary>';
+                            echo '<pre style="background: #f1f1f1; padding: 10px; font-size: 11px; max-height: 200px; overflow-y: auto;">';
+                            print_r($selected_import);
+                            echo '</pre></details>';
+                        }
+                    ?>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
